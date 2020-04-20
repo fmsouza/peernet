@@ -9,7 +9,7 @@ import { Log } from '../utils';
 
 import { Peer } from './types';
 import { SignalServer } from './signal-server';
-import { Client } from '../client.ts';
+import { Client } from '../client';
 
 export interface NetworkOptions {
   host?: string;
