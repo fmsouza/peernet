@@ -58,20 +58,24 @@ export class Network {
     this._server.use('/', signalling.router);
   }
 
-  private _connectInitialPeers(ips: string[]): void {
-    ips.forEach(peerIp => this.addPeer(peerIp));
+  private async _connectInitialPeers(ips: string[]): Promise<void> {
+    Log.info(`Connecting to initial peers list: [${ips.join('')}]`);
+    (await Promise.all(ips.map(async (peerIp) => {
+      const peer = this.addPeer(peerIp) as Peer;
+      return peer.client.getPeers();
+    })))
+      .reduce((list, peerList) => list.concat(peerList), [])
+      .forEach(peerIp => this.addPeer(peerIp));
   }
 
   public addPeer(peerIp: string): Peer | null {
     if (ip.isEqual(this.address, peerIp)) return null; // Avoid adding myself as a peer
-    if (this._peers.has(peerIp)) return null; // Avoid double adding peers
-
-    Log.info(`Adding peer: ${peerIp}`);
     const peer: Peer = {
       ip: peerIp,
       client: new Client(peerIp),
     }
     this._peers.set(peer.ip, peer);
+    Log.info(`Added peer: ${peerIp}`);
     return peer;
   }
 
