@@ -43,7 +43,7 @@ export class SignalServer {
 
   private _handleIncomingPeer(req: Request, params: any): any {
     const ip: string = params.ip || req.ip;
-    const peer = this._network.addPeer(ip);
+    const peer = this._network.addPeer(`http://${ip}`);
     if (peer) {
       this._network.broadcastPeer(peer);
     }

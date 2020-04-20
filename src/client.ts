@@ -7,7 +7,7 @@ export class Client {
   private _client: RequestFunction<ValidResponse> = bent('json');
 
   public constructor(address: string) {
-    this._client = bent(address, 'POST', 'json');
+    this._client = bent(`${address}:3390`, 'POST', 'json');
   }
 
   public request(methodName: string, params: any = {}): Promise<ValidResponse> {
