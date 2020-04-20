@@ -1,34 +1,43 @@
-import bent, { RequestFunction, ValidResponse } from 'bent';
+import axios from 'axios';
 
-import { Peer } from './network';
-import { Signal } from './utils';
+import { Signal, Log } from './utils';
 
 export class Client {
-  private _client: RequestFunction<ValidResponse> = bent('json');
+  private _address: string;
 
   public constructor(address: string) {
     if (!address.startsWith('http')) address = `http://${address}`;
     address = `${address}:3390/`;
-    this._client = bent(address, 'POST', 'json');
+    this._address = address;
   }
 
-  public request(methodName: string, params: any = {}): Promise<ValidResponse> {
-    return this._client('/', { methodName, params });
+  public async request<T>(methodName: string, data: any = {}): Promise<T> {
+    Log.info(`Sending ${methodName} request to ${this._address}...`);
+    const headers = {
+      'Content-Type': 'application/json'
+    };
+    return axios({
+      method: 'POST',
+      data,
+      headers,
+      url: this._address,
+    // tslint:disable-next-line: no-shadowed-variable
+    }).then(({ data }) => data);
+  }
+
+  public ack(): Promise<void> {
+    return this.request(Signal.HANDSHAKE);
   }
 
   public async announce(ip?: string): Promise<void> {
-    await this.request(Signal.ANNOUNCE_PEER, { ip });
+    await this.request<void>(Signal.ANNOUNCE_PEER, { ip });
   }
 
   public async broadcast(data: any): Promise<void> {
-    await this.request(Signal.BROADCAST_DATA, { data });
+    await this.request<void>(Signal.BROADCAST_DATA, { data });
   }
 
-  public async getPeers(): Promise<Peer[]> {
-    const peerIps = (await this.request(Signal.REQUEST_PEERS)) as string[];
-    return peerIps.map(peerIp => ({
-      ip: peerIp,
-      client: new Client(peerIp),
-    }));
+  public getPeers(): Promise<string[]> {
+    return this.request<string[]>(Signal.REQUEST_PEERS);
   }
 }
