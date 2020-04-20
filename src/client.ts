@@ -11,14 +11,14 @@ export class Client {
     this._address = address;
   }
 
-  public async request<T>(methodName: string, data: any = {}): Promise<T> {
+  public async request<T>(methodName: string, params: any = {}): Promise<T> {
     Log.info(`Sending ${methodName} request to ${this._address}...`);
     const headers = {
       'Content-Type': 'application/json'
     };
     return axios({
       method: 'POST',
-      data,
+      data: { methodName, params },
       headers,
       url: this._address,
     // tslint:disable-next-line: no-shadowed-variable
