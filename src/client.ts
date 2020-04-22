@@ -12,7 +12,7 @@ export class Client {
   }
 
   public async request<T>(methodName: string, params: any = {}): Promise<T> {
-    Log.info(`Sending ${methodName} request to ${this._address}...`);
+    Log.info(`Sending '${methodName}' request to ${this._address}...`);
     const headers = {
       'Content-Type': 'application/json'
     };

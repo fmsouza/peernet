@@ -16,9 +16,9 @@ export class SignalServer {
   }
 
   private _handleRequest(req: Request, res: Response): void {
-    Log.info(`Request received from: ${req.ip}`);
     try {
       const { methodName, params } = this._extractBodyParams(req);
+      Log.info(`Request received from: ${req.ip} - ${methodName}`);
       const response: any = this._handleRPCRequest(req, methodName, params);
       res.status(200).jsonp(response);
     } catch (e) {
