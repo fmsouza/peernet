@@ -62,6 +62,7 @@ export class Network {
     Log.info(`Connecting to initial peers list: [${ips.join('')}]`);
     (await Promise.all(ips.map(async (peerIp) => {
       if (ip.isEqual(this.address, peerIp)) return []; // Avoid adding myself as a peer
+      if (this.peers.some(peer => peer.ip === peerIp)) return []; // Avoid double adding a peer
       const peer: Peer = await this.addPeer(peerIp);
       Log.info(`Requesting new peers to ${peerIp}...`);
       const newPeers = await peer.client.getPeers();
