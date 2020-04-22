@@ -1,6 +1,7 @@
 import axios from 'axios';
 
-import { Signal, Log } from './utils';
+import { NetworkSignals, Peer } from './network';
+import { Log, randomId } from './utils';
 
 export class Client {
 
@@ -21,18 +22,25 @@ export class Client {
   }
 
   public ack(): Promise<void> {
-    return this.request(Signal.HANDSHAKE);
+    return this.request(NetworkSignals.HANDSHAKE);
   }
 
   public async announce(address?: string): Promise<void> {
-    await this.request<void>(Signal.ANNOUNCE_PEER, { address });
+    await this.request<void>(NetworkSignals.ANNOUNCE_PEER, { address });
+  }
+
+  public async add(data: any): Promise<string> {
+    const id: string = randomId();
+    await this.broadcast(id, data);
+    return id;
   }
 
   public async broadcast(id: string, data: any): Promise<void> {
-    await this.request<void>(Signal.BROADCAST_DATA, { id, data });
+    await this.request<void>(NetworkSignals.BROADCAST_DATA, { id, data });
   }
 
-  public getPeers(): Promise<string[]> {
-    return this.request<string[]>(Signal.REQUEST_PEERS);
+  public async getPeers(): Promise<Peer[]> {
+    const peerAddresses: string[] = await this.request<string[]>(NetworkSignals.REQUEST_PEERS);
+    return peerAddresses.map(address => new Peer(address));
   }
 }

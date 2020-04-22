@@ -1,86 +1,79 @@
-import express, { Express, Request, Response } from 'express';
+import { Server } from 'http';
+import express, { Express, Request, Response, NextFunction } from 'express';
+import compression from 'compression';
+import helmet from 'helmet';
+import bodyParser from 'body-parser';
 
-import { NodeDriver } from '../node';
-import { HttpError, Log, Signal } from '../utils';
+import { Log, Emitter } from '../utils';
 import { Address } from './address';
+import { Command } from './command';
 import { Network } from './network';
+import { Peer } from './peer';
+import { NetworkOptions } from './types';
 
-export class SignalServer {
-  private _router: Express = express();
+export class SignalServer extends Emitter {
+  private _server: Express;
 
-  public get router(): Express {
-    return this._router;
+  public constructor(private _network: Network, private _options?: NetworkOptions) {
+    super();
+    this._server = express();
+    this._server.use(compression());
+    this._server.use(helmet());
+    this._server.use(bodyParser.urlencoded({extended: true}));
+    this._server.use(bodyParser.json());
+    this._server.use((req: Request, res: Response, next: NextFunction) => {
+      res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept');
+      res.header('Access-Control-Allow-Methods', 'HEAD, OPTIONS, POST');
+      res.header('Access-Control-Allow-Origin', '*');
+      next();
+    });
+    this._server.post('/', this._handleRequest.bind(this));
   }
 
-  public constructor(private _network: Network) {
-    this._router.post('/', this._handleRequest.bind(this));
+  public listen(): Server {
+    const port: number = this._options?.port || 3390;
+    const host: string = this._options?.host || '0.0.0.0';
+
+    return this._server.listen(port, host, () => {
+      Log.info(`Server started on port ${port}`);
+      this._connectInitialPeers(this._options?.initialPeers);
+    });
   }
 
-  private async _handleRequest(req: Request, res: Response): Promise<void> {
-    try {
-      const { methodName, params } = this._extractBodyParams(req);
-      Log.info(`Request received from: ${req.ip} - ${methodName}`);
-      const response: any = await this._handleRPCRequest(req, methodName, params);
-      res.status(200).jsonp(response);
-    } catch (e) {
-      res.status(e.code || 500).send(e.message);
-    }
+  private async _connectInitialPeers(addresses: string[] = []): Promise<void> {
+    Log.info(`Connecting to initial peers list: [${addresses.join('')}]`);
+    (await Promise.all(addresses.map(async (peerAddress: string) => {
+      const address: Address = new Address(peerAddress);
+      try {
+        if (!this._network.isAddressKnown(address.toString())) return [];
+        const peer: Peer = new Peer(address.toString());
+        await this._network.addPeer(peer);
+        Log.info(`Requesting new peers to ${address}...`);
+        const newPeers: Peer[] = await peer.client.getPeers();
+        return newPeers;
+      } catch (e) {
+        Log.error(`Failed to add ${address} as a peer.`);
+        Log.error(e.message);
+        return [];
+      }
+    })))
+      .reduce((list, peerList) => list.concat(peerList), [])
+      .forEach((peer: Peer) => {
+        if (this._network.isAddressKnown(peer.address)) {
+          this._network.addPeer(peer);
+        }
+      });
   }
 
-  private async _handleRPCRequest(req: Request, method: string, params: any): Promise<any> {
-    switch (method) {
-      case Signal.ANNOUNCE_PEER:
-        return this._handleIncomingPeer(req, params);
-      case Signal.BROADCAST_DATA:
-        return this._handleBroadcastData(req, params);
-      case Signal.REQUEST_PEERS:
-        return this._handleRequestPeers(req, params);
-      case Signal.HANDSHAKE:
-        return this._handleHandshake(req, params);
-      default:
-        return this._handleMethodNotFound();
-    }
-  }
-
-  private async _handleIncomingPeer(req: Request, params: any): Promise<any> {
-    const address: Address = new Address(params.address || req.ip);
-    if (!this._network.isAddressValid(address.toString())) return Signal.OK;
-
-    const peer = await this._network.addPeer(address.toString());
-    if (peer) {
-      await this._network.broadcastPeer(peer);
-    }
-    return Signal.OK;
-  }
-
-  private async _handleRequestPeers(req: Request, params: any): Promise<any> {
-    return this._network.peers.map(peer => peer.address);
-  }
-
-  private async _handleBroadcastData(req: Request, params: any): Promise<any> {
-    const node: NodeDriver = new NodeDriver();
-    const { id, data } = params;
-    if (!node.storage?.has(id)) {
-      await node.storage?.save(data, id);
-      Log.info(`Broadcasting data: ${id}`);
-      this._network.broadcastData(id, data);
-    }
-    return Signal.OK;
-  }
-
-  private async _handleHandshake(req: Request, params: any): Promise<any> {
-    return { ack: 1 };
-  }
-
-  private _extractBodyParams(req: Request): { methodName: string, params?: any } {
+  private _handleRequest(req: Request, res: Response): void {
     if (!req.body || !req.body.methodName) {
-      throw new HttpError(422, 'The method name is missing.');
+      return res.status(422).send('The method name is missing.') as any; // avoids compiler complains
     }
     const { methodName, params } = req.body;
-    return { methodName, params: params || {} };
-  }
+    const command: Command = new Command(req.ip, params);
+    Log.info(`Request received from: ${req.ip} - ${methodName}`);
 
-  private _handleMethodNotFound(): any {
-    throw new HttpError(404, 'Method name not found.');
+    this.on(command.end, ({ status, body }) => res.status(status).jsonp(body));
+    this.emit(methodName, command);
   }
 }

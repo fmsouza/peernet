@@ -1,25 +1,18 @@
 import { Server } from 'http';
-import express, { Express, Request, Response, NextFunction } from 'express';
-import compression from 'compression';
-import helmet from 'helmet';
-import bodyParser from 'body-parser';
 import ip from 'ip';
 
-import { Log } from '../utils';
+import { StorageSignals } from '../storage';
+import { Log, Emitter } from '../utils';
 
 import { Address } from './address';
+import { Command } from './command';
 import { Peer } from './peer';
+import { NetworkSignals } from './signals';
 import { SignalServer } from './signal-server';
+import { NetworkOptions } from './types';
 
-export interface NetworkOptions {
-  host?: string;
-  port?: number;
-  maxBroadcasts?: number;
-  initialPeers?: string[];
-}
-
-export class Network {
-  private _server: Express;
+export class Network extends Emitter {
+  private _server: SignalServer;
   private _listener: Server;
   private _peers: Map<string, Peer> = new Map();
   private _maxBroadcasts: number = Infinity;
@@ -33,67 +26,27 @@ export class Network {
   }
 
   public constructor(options?: NetworkOptions) {
+    super();
     Log.info('Starting server...');
-    this._server = express();
-    this._server.use(compression());
-    this._server.use(helmet());
-    this._server.use(bodyParser.urlencoded({extended: true}));
-    this._server.use(bodyParser.json());
-    this._server.use((req: Request, res: Response, next: NextFunction) => {
-      res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept');
-      res.header('Access-Control-Allow-Methods', 'HEAD, OPTIONS, POST');
-      res.header('Access-Control-Allow-Origin', '*');
-      next();
-    });
     if(options?.maxBroadcasts) this._maxBroadcasts = options.maxBroadcasts;
-    const port: number = options?.port || 3390;
-    const host: string = options?.host || '0.0.0.0';
-    this._configureSignallingServer();
-    this._listener = this._server.listen(port, host, () => {
-      Log.info(`Server started on port ${port}`);
-      if (options?.initialPeers) this._connectInitialPeers(options.initialPeers);
-    });
+    this._server = new SignalServer(this, options);
+    this._listener = this._server.listen();
+    this.on(NetworkSignals.ANNOUNCE_PEER, this._onPeerAnnounced.bind(this));
+    this.on(NetworkSignals.BROADCAST_DATA, this._onBroadcastData.bind(this));
+    this.on(NetworkSignals.HANDSHAKE, this._onHandshake.bind(this));
+    this.on(NetworkSignals.REQUEST_BROADCAST_DATA, this._onBroadcastRequest.bind(this));
+    this.on(NetworkSignals.REQUEST_PEERS, this._onPeersRequested.bind(this));
+    this.on(NetworkSignals.FINISH, this._onFinish.bind(this));
   }
 
-  private _configureSignallingServer(): void {
-    const signalling: SignalServer = new SignalServer(this);
-    this._server.use('/', signalling.router);
-  }
-
-  public isAddressValid(address: string): boolean {
+  public isAddressKnown(address: string): boolean {
     if (this.address === address) return false; // Avoid adding myself as a peer
     if (this.peers.some(peer => peer.address === address)) return false; // Avoid double adding a peer
     return true;
   }
 
-  private async _connectInitialPeers(addresses: string[]): Promise<void> {
-    Log.info(`Connecting to initial peers list: [${addresses.join('')}]`);
-    (await Promise.all(addresses.map(async (peerAddress: string) => {
-      const address: Address = new Address(peerAddress);
-      try {
-        if (!this.isAddressValid(address.toString())) return [];
-        const peer: Peer = await this.addPeer(address.toString());
-        Log.info(`Requesting new peers to ${address}...`);
-        const newPeers = await peer.client.getPeers();
-        return newPeers;
-      } catch (e) {
-        Log.error(`Failed to add ${address} as a peer.`);
-        Log.error(e.message);
-        return [];
-      }
-    })))
-      .reduce((list, peerList) => list.concat(peerList), [])
-      .forEach(peerAddress => {
-        const address: Address = new Address(peerAddress);
-        if (this.isAddressValid(address.toString())) {
-          this.addPeer(address.toString());
-        }
-      });
-  }
-
-  public async addPeer(peerAddress: string): Promise<Peer> {
-    Log.info(`Adding peer: ${peerAddress}`);
-    const peer: Peer = new Peer(peerAddress);
+  public async addPeer(peer: Peer): Promise<Peer> {
+    Log.info(`Adding peer: ${peer.address}`);
     this._peers.set(peer.address, peer);
     Log.info(`Added peer: ${peer.address}`);
     Log.info(`Announcing myself as a peer to ${peer.address}...`);
@@ -124,5 +77,55 @@ export class Network {
         return error ? reject(error) : resolve();
       });
     })
+  }
+
+  private async _onBroadcastData(command: Command): Promise<void> {
+    const { id, data } = command.data;
+    const response = { status: 200, body: NetworkSignals.OK };
+    try {
+      await this.broadcastData(id, data);
+    } catch (e) {
+      response.status = e.code || 500;
+      response.body = e.message;
+    } finally {
+      this.emit(command.end, response);
+    }
+  }
+
+  private async _onPeerAnnounced(command: Command): Promise<void> {
+    const peer: Peer = command.data?.address ? new Peer(command.data?.address) : command.peer;
+    const response = { status: 200, body: NetworkSignals.OK };
+    try {
+      if (!this.isAddressKnown(peer.address)) {
+        await Promise.all([
+          this.addPeer(peer),
+          this.broadcastPeer(peer)
+        ]);
+      }
+    } catch (e) {
+      response.status = e.code || 500;
+      response.body = e.message;
+    } finally {
+      this.emit(command.end, response);
+    }
+  }
+
+  private async _onHandshake(command: Command): Promise<void> {
+    return this._onFinish(command);
+  }
+
+  private async _onPeersRequested(command: Command): Promise<void> {
+    const peerAddresses: string[] = this.peers.map(peer => peer.address);
+    const response = { status: 200, body: peerAddresses };
+    this.emit(command.end, response);
+  }
+
+  private async _onBroadcastRequest(command: Command): Promise<void> {
+    this.emit(StorageSignals.SAVE_DATA, command);
+  }
+
+  private async _onFinish(command: Command): Promise<void> {
+    const response = { status: 200, body: NetworkSignals.OK };
+    this.emit(command.end, response);
   }
 }

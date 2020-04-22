@@ -1,9 +1,12 @@
+import { Emitter } from '../utils';
 import { GraphNode } from './graph-node';
+import { GraphOptions } from './types';
 
-export interface GraphOptions {}
+export class Graph extends Emitter {
 
-export class Graph {
-  public constructor(options?: GraphOptions) {}
+  public constructor(options?: GraphOptions) {
+    super();
+  }
 
   public getNode(path: string[]): Promise<GraphNode> {
     return Promise.resolve(new GraphNode());

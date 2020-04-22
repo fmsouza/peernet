@@ -10,28 +10,26 @@ interface Options {
   storage?: StorageOptions;
 }
 
-type Nullable<T> = T | null;
-
 export class NodeDriver {
   private static _instance: NodeDriver;
-  private _graph: Nullable<Graph> = null;
-  private _identity: Nullable<Identity> = null;
-  private _network: Nullable<Network> = null;
-  private _storage: Nullable<Storage> = null;
+  private _graph!: Graph;
+  private _identity!: Identity;
+  private _network!: Network;
+  private _storage!: Storage;
 
-  public get graph(): Nullable<Graph> {
+  public get graph(): Graph {
     return this._graph;
   }
 
-  public get identity(): Nullable<Identity> {
+  public get identity(): Identity {
     return this._identity;
   }
 
-  public get network(): Nullable<Network> {
+  public get network(): Network {
     return this._network;
   }
 
-  public get storage(): Nullable<Storage> {
+  public get storage(): Storage {
     return this._storage;
   }
 
