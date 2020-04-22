@@ -26,7 +26,6 @@ export class Network {
 
   public get address(): string {
     return new Address(ip.address()).toString();
-    return ip.address();
   }
 
   public get peers(): Peer[] {
@@ -66,7 +65,7 @@ export class Network {
     (await Promise.all(addresses.map(async (peerAddress: string) => {
       const address: Address = new Address(peerAddress);
       try {
-        if (ip.isEqual(this.address, address.toString())) return []; // Avoid adding myself as a peer
+        if (this.address === address.toString()) return []; // Avoid adding myself as a peer
         if (this.peers.some(peer => peer.address === address.toString())) return []; // Avoid double adding a peer
         const peer: Peer = await this.addPeer(address.toString());
         Log.info(`Requesting new peers to ${address}...`);
@@ -75,6 +74,7 @@ export class Network {
         return newPeers;
       } catch (e) {
         Log.error(`Failed to add ${address} as a peer.`);
+        Log.error(e.message);
         return [];
       }
     })))
@@ -83,8 +83,9 @@ export class Network {
   }
 
   public async addPeer(peerAddress: string): Promise<Peer> {
+    Log.info(`Adding peer: ${peerAddress}`);
     const peer: Peer = new Peer(peerAddress);
-    Log.info(`Announced myself as a peer to ${peer.address}...`);
+    Log.info(`Announcing myself as a peer to ${peer.address}...`);
     await peer.client.announce();
     this._peers.set(peer.address, peer);
     Log.info(`Added peer: ${peer.address}`);

@@ -10,7 +10,7 @@ export class Address {
   }
 
   public toString(): string {
-    const { path, port, protocol } = this._address;
-    return `${protocol}//${path}:${port}/`;
+    const { hostname, pathname, port, protocol } = this._address;
+    return `${protocol}//${hostname || pathname}:${port}/`;
   }
 }
