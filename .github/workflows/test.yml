@@ -18,7 +18,7 @@ jobs:
       - uses: actions/checkout@v2
       - name: Install npm dependencies
         run: |
-          npm ci
+          npm i
       - name: Run tests
         run: |
           npm test
