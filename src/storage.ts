@@ -1,25 +1,22 @@
-import { NodeDriver } from './node';
-
 export interface StorageOptions {}
 
+const store: Map<string, any> = new Map();
+
 export class Storage {
-  private _data: any = {};
 
   public constructor(options?: StorageOptions) {}
 
   public has(key: string): boolean {
-    return Boolean(this._data[key]);
+    return store.has(key);
   }
 
   public async get(key: string): Promise<any> {
-    return this._data[key] || null;
+    return store.get(key);
   }
 
   public async save(data: any, key?: string): Promise<string> {
-    if (!key) key = new Date().toISOString();
-    const node: NodeDriver = new NodeDriver();
-    this._data[key] = data;
-    await node.network?.broadcastData(key, data);
+    if (!key) key = btoa(new Date().toISOString());
+    store.set(key, data);
     return key;
   }
 }
