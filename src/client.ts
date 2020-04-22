@@ -6,7 +6,6 @@ export class Client {
   private _address: string;
 
   public constructor(address: string) {
-    if (!address.startsWith('http')) address = `http://${address}`;
     address = `${address}:3390/`;
     this._address = address;
   }

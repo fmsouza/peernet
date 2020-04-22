@@ -4,10 +4,11 @@ import compression from 'compression';
 import helmet from 'helmet';
 import bodyParser from 'body-parser';
 import ip from 'ip';
+import { parse as parseUrl } from 'url';
 
 import { Log } from '../utils';
 
-import { Peer } from './types';
+import { Peer } from './peer';
 import { SignalServer } from './signal-server';
 import { Client } from '../client';
 
@@ -49,8 +50,10 @@ export class Network {
     const port: number = options?.port || 3390;
     const host: string = options?.host || '0.0.0.0';
     this._configureSignallingServer();
-    this._listener = this._server.listen(port, host, () => Log.info(`Server started on port ${port}`));
-    if (options?.initialPeers) this._connectInitialPeers(options.initialPeers);
+    this._listener = this._server.listen(port, host, () => {
+      Log.info(`Server started on port ${port}`);
+      if (options?.initialPeers) this._connectInitialPeers(options.initialPeers);
+    });
   }
 
   private _configureSignallingServer(): void {
@@ -60,28 +63,31 @@ export class Network {
 
   private async _connectInitialPeers(ips: string[]): Promise<void> {
     Log.info(`Connecting to initial peers list: [${ips.join('')}]`);
-    (await Promise.all(ips.map(async (peerIp) => {
-      if (ip.isEqual(this.address, peerIp)) return []; // Avoid adding myself as a peer
-      if (this.peers.some(peer => peer.ip === peerIp)) return []; // Avoid double adding a peer
-      const peer: Peer = await this.addPeer(peerIp);
-      Log.info(`Requesting new peers to ${peerIp}...`);
-      const newPeers = await peer.client.getPeers();
-      Log.info(`Peers received: ${JSON.stringify(newPeers)}`);
-      return newPeers;
+    (await Promise.all(ips.map(async (peerIp: any) => {
+      peerIp = parseUrl(peerIp);
+      try {
+        if (ip.isEqual(this.address, peerIp.href)) return []; // Avoid adding myself as a peer
+        if (this.peers.some(peer => peer.ip.href === peerIp.href)) return []; // Avoid double adding a peer
+        const peer: Peer = await this.addPeer(peerIp.href);
+        Log.info(`Requesting new peers to ${peerIp.href}...`);
+        const newPeers = await peer.client.getPeers();
+        Log.info(`Peers received: ${JSON.stringify(newPeers)}`);
+        return newPeers;
+      } catch (e) {
+        Log.error(`Failed to add ${peerIp.href} as a peer.`);
+        return [];
+      }
     })))
       .reduce((list, peerList) => list.concat(peerList), [])
       .forEach(peerIp => this.addPeer(peerIp));
   }
 
   public async addPeer(peerIp: string): Promise<Peer> {
-    const peer: Peer = {
-      ip: peerIp,
-      client: new Client(peerIp),
-    };
+    const peer: Peer = new Peer(peerIp);
     Log.info(`Announced myself as a peer to ${peerIp}...`);
     await peer.client.announce();
-    this._peers.set(peer.ip, peer);
-    Log.info(`Added peer: ${peerIp}`);
+    this._peers.set(peer.ip.href, peer);
+    Log.info(`Added peer: ${peer.ip.href}`);
     return peer;
   }
 
@@ -90,7 +96,7 @@ export class Network {
       this.peers
         .filter(peer => peer.ip !== newPeer.ip) // Avoid broadcasting the peer to itself
         .slice(0, this._maxBroadcasts)
-        .map(peer => peer.client.announce(newPeer.ip))
+        .map(peer => peer.client.announce(newPeer.ip.href))
     );
   }
 
