@@ -61,7 +61,8 @@ export class Network {
   private async _connectInitialPeers(ips: string[]): Promise<void> {
     Log.info(`Connecting to initial peers list: [${ips.join('')}]`);
     (await Promise.all(ips.map(async (peerIp) => {
-      const peer = await this.addPeer(peerIp) as Peer;
+      if (ip.isEqual(this.address, peerIp)) return []; // Avoid adding myself as a peer
+      const peer: Peer = await this.addPeer(peerIp);
       Log.info(`Requesting new peers to ${peerIp}...`);
       const newPeers = await peer.client.getPeers();
       Log.info(`Peers received: ${JSON.stringify(newPeers)}`);
@@ -71,12 +72,11 @@ export class Network {
       .forEach(peerIp => this.addPeer(peerIp));
   }
 
-  public async addPeer(peerIp: string): Promise<Peer | null> {
-    if (ip.isEqual(this.address, peerIp)) return null; // Avoid adding myself as a peer
+  public async addPeer(peerIp: string): Promise<Peer> {
     const peer: Peer = {
       ip: peerIp,
       client: new Client(peerIp),
-    }
+    };
     Log.info(`Announced myself as a peer to ${peerIp}...`);
     await peer.client.announce();
     this._peers.set(peer.ip, peer);
