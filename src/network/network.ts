@@ -110,11 +110,11 @@ export class Network {
     );
   }
 
-  public async broadcastData(data: any): Promise<void> {
+  public async broadcastData(id: string, data: any): Promise<void> {
     await Promise.all(
       this.peers
         .slice(0, this._maxBroadcasts)
-        .map(peer => peer.client.broadcast(data))
+        .map(peer => peer.client.broadcast(id, data))
     );
   }
 

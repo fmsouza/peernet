@@ -28,8 +28,8 @@ export class Client {
     await this.request<void>(Signal.ANNOUNCE_PEER, { address });
   }
 
-  public async broadcast(data: any): Promise<void> {
-    await this.request<void>(Signal.BROADCAST_DATA, { data });
+  public async broadcast(id: string, data: any): Promise<void> {
+    await this.request<void>(Signal.BROADCAST_DATA, { id, data });
   }
 
   public getPeers(): Promise<string[]> {
