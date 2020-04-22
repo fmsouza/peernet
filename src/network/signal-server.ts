@@ -15,18 +15,18 @@ export class SignalServer {
     this._router.post('/', this._handleRequest.bind(this));
   }
 
-  private _handleRequest(req: Request, res: Response): void {
+  private async _handleRequest(req: Request, res: Response): Promise<void> {
     try {
       const { methodName, params } = this._extractBodyParams(req);
       Log.info(`Request received from: ${req.ip} - ${methodName}`);
-      const response: any = this._handleRPCRequest(req, methodName, params);
+      const response: any = await this._handleRPCRequest(req, methodName, params);
       res.status(200).jsonp(response);
     } catch (e) {
       res.status(e.code || 500).send(e.message);
     }
   }
 
-  private _handleRPCRequest(req: Request, method: string, params: any): void {
+  private async _handleRPCRequest(req: Request, method: string, params: any): Promise<any> {
     switch (method) {
       case Signal.ANNOUNCE_PEER:
         return this._handleIncomingPeer(req, params);
@@ -37,31 +37,31 @@ export class SignalServer {
       case Signal.HANDSHAKE:
         return this._handleHandshake(req, params);
       default:
-        this._handleMethodNotFound();
+        return this._handleMethodNotFound();
     }
   }
 
-  private _handleIncomingPeer(req: Request, params: any): any {
+  private async _handleIncomingPeer(req: Request, params: any): Promise<any> {
     const ip: string = params.ip || req.ip;
-    const peer = this._network.addPeer(`http://${ip}`);
+    const peer = await this._network.addPeer(`http://${ip}`);
     if (peer) {
-      this._network.broadcastPeer(peer);
+      await this._network.broadcastPeer(peer);
     }
     return Signal.OK;
   }
 
-  private _handleRequestPeers(req: Request, params: any): any {
+  private async _handleRequestPeers(req: Request, params: any): Promise<any> {
     return this._network.peers;
   }
 
-  private _handleBroadcastData(req: Request, params: any): any {
+  private async _handleBroadcastData(req: Request, params: any): Promise<any> {
     const node: NodeDriver = new NodeDriver();
     node.storage?.save(params);
     this._network.broadcastData(params);
     return Signal.OK;
   }
 
-  private _handleHandshake(req: Request, params: any): any {
+  private async _handleHandshake(req: Request, params: any): Promise<any> {
     return { ack: 1 };
   }
 
