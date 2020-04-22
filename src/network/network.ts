@@ -60,17 +60,21 @@ export class Network {
     this._server.use('/', signalling.router);
   }
 
+  public isAddressValid(address: string): boolean {
+    if (this.address === address) return false; // Avoid adding myself as a peer
+    if (this.peers.some(peer => peer.address === address)) return false; // Avoid double adding a peer
+    return true;
+  }
+
   private async _connectInitialPeers(addresses: string[]): Promise<void> {
     Log.info(`Connecting to initial peers list: [${addresses.join('')}]`);
     (await Promise.all(addresses.map(async (peerAddress: string) => {
       const address: Address = new Address(peerAddress);
       try {
-        if (this.address === address.toString()) return []; // Avoid adding myself as a peer
-        if (this.peers.some(peer => peer.address === address.toString())) return []; // Avoid double adding a peer
+        if (!this.isAddressValid(address.toString())) return [];
         const peer: Peer = await this.addPeer(address.toString());
         Log.info(`Requesting new peers to ${address}...`);
         const newPeers = await peer.client.getPeers();
-        Log.info(`Peers received: ${JSON.stringify(newPeers)}`);
         return newPeers;
       } catch (e) {
         Log.error(`Failed to add ${address} as a peer.`);
@@ -79,7 +83,12 @@ export class Network {
       }
     })))
       .reduce((list, peerList) => list.concat(peerList), [])
-      .forEach(peerIp => this.addPeer(peerIp));
+      .forEach(peerAddress => {
+        const address: Address = new Address(peerAddress);
+        if (this.isAddressValid(address.toString())) {
+          this.addPeer(address.toString());
+        }
+      });
   }
 
   public async addPeer(peerAddress: string): Promise<Peer> {
