@@ -44,6 +44,8 @@ export class SignalServer {
 
   private async _handleIncomingPeer(req: Request, params: any): Promise<any> {
     const address: Address = new Address(params.address || req.ip);
+    if (this._network.address === address.toString()) return Signal.OK; // Avoid adding myself as a peer
+    if (this._network.peers.some(peer => peer.address === address.toString())) return Signal.OK; // Avoid double adding a peer
     const peer = await this._network.addPeer(address.toString());
     if (peer) {
       await this._network.broadcastPeer(peer);

@@ -85,10 +85,10 @@ export class Network {
   public async addPeer(peerAddress: string): Promise<Peer> {
     Log.info(`Adding peer: ${peerAddress}`);
     const peer: Peer = new Peer(peerAddress);
-    Log.info(`Announcing myself as a peer to ${peer.address}...`);
-    await peer.client.announce();
     this._peers.set(peer.address, peer);
     Log.info(`Added peer: ${peer.address}`);
+    Log.info(`Announcing myself as a peer to ${peer.address}...`);
+    await peer.client.announce();
     return peer;
   }
 
