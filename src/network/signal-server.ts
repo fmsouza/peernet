@@ -60,6 +60,9 @@ export class SignalServer {
   private async _handleBroadcastData(req: Request, params: any): Promise<any> {
     const node: NodeDriver = new NodeDriver();
     const { id, data } = params;
+    console.log('ID:', id);
+    console.log('Has this id?', node.storage?.has(id));
+    console.log('Data:', params);
     if (!node.storage?.has(id)) {
       await node.storage?.save(data, id);
     }
