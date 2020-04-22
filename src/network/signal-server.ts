@@ -65,6 +65,7 @@ export class SignalServer {
     console.log('Data:', params);
     if (!node.storage?.has(id)) {
       await node.storage?.save(data, id);
+      this._network.broadcastData(id, data);
     }
     return Signal.OK;
   }
