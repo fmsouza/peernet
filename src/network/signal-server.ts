@@ -70,7 +70,7 @@ export class SignalServer {
       throw new HttpError(422, 'The method name is missing.');
     }
     const { methodName, params } = req.body;
-    return { methodName, params };
+    return { methodName, params: params || {} };
   }
 
   private _handleMethodNotFound(): any {
