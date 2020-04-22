@@ -39,10 +39,8 @@ export class Network extends Emitter {
     this.on(NetworkSignals.FINISH, this._onFinish.bind(this));
   }
 
-  public isAddressKnown(address: string): boolean {
-    if (this.address === address) return false; // Avoid adding myself as a peer
-    if (this.peers.some(peer => peer.address === address)) return false; // Avoid double adding a peer
-    return true;
+  public isKnownPeer(peer: Peer): boolean {
+    return (this.address === peer.address || this.peers.some(p => p.address === peer.address)); // Avoids self adding or double adding a peer
   }
 
   public async addPeer(peer: Peer): Promise<Peer> {
@@ -96,7 +94,7 @@ export class Network extends Emitter {
     const peer: Peer = command.data?.address ? new Peer(command.data?.address) : command.peer;
     const response = { status: 200, body: NetworkSignals.OK };
     try {
-      if (!this.isAddressKnown(peer.address)) {
+      if (!this.isKnownPeer(peer)) {
         await Promise.all([
           this.addPeer(peer),
           this.broadcastPeer(peer)

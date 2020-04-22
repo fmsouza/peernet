@@ -41,33 +41,26 @@ export class SignalServer extends Emitter {
   }
 
   private async _connectInitialPeers(addresses: string[] = []): Promise<void> {
-    Log.info(`Connecting to initial peers list: [${addresses.join('')}]`);
-    (await Promise.all(addresses.map(async (peerAddress: string) => {
-      const address: Address = new Address(peerAddress);
+    Log.info(`Connecting to initial peers list: [${addresses.join(', ')}]`);
+    (await Promise.all(addresses.map(async (address: string) => {
+      const peer: Peer = new Peer(address);
+      if (this._network.isKnownPeer(peer)) return [];
       try {
-        if (!this._network.isAddressKnown(address.toString())) return [];
-        const peer: Peer = new Peer(address.toString());
-        await this._network.addPeer(peer);
-        Log.info(`Requesting new peers to ${address}...`);
-        const newPeers: Peer[] = await peer.client.getPeers();
-        return newPeers;
+        Log.info(`Requesting new peers to ${peer.address}...`);
+        const peers: Peer[] = await peer.client.getPeers();
+        return [peer, ...peers];
       } catch (e) {
-        Log.error(`Failed to add ${address} as a peer.`);
-        Log.error(e.message);
-        return [];
+        Log.error(`Failed to get ${peer.address} neighbors.`);
+        return [peer];
       }
     })))
       .reduce((list, peerList) => list.concat(peerList), [])
-      .forEach((peer: Peer) => {
-        if (this._network.isAddressKnown(peer.address)) {
-          this._network.addPeer(peer);
-        }
-      });
+      .forEach((peer: Peer) => this._network.addPeer(peer));
   }
 
   private _handleRequest(req: Request, res: Response): void {
     if (!req.body || !req.body.methodName) {
-      return res.status(422).send('The method name is missing.') as any; // avoids compiler complains
+      return res.status(422).send('The method name is missing.') as any; // avoids compiler complaints
     }
     const { methodName, params } = req.body;
     const command: Command = new Command(req.ip, params);
