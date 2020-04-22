@@ -24,8 +24,8 @@ export class Client {
     return this.request(Signal.HANDSHAKE);
   }
 
-  public async announce(ip?: string): Promise<void> {
-    await this.request<void>(Signal.ANNOUNCE_PEER, { ip });
+  public async announce(address?: string): Promise<void> {
+    await this.request<void>(Signal.ANNOUNCE_PEER, { address });
   }
 
   public async broadcast(data: any): Promise<void> {

@@ -2,6 +2,7 @@ import express, { Express, Request, Response } from 'express';
 
 import { NodeDriver } from '../node';
 import { HttpError, Log, Signal } from '../utils';
+import { Address } from './address';
 import { Network } from './network';
 
 export class SignalServer {
@@ -42,8 +43,8 @@ export class SignalServer {
   }
 
   private async _handleIncomingPeer(req: Request, params: any): Promise<any> {
-    const ip: string = params.ip || req.ip;
-    const peer = await this._network.addPeer(`http://${ip}`);
+    const address: Address = new Address(params.address || req.ip);
+    const peer = await this._network.addPeer(address.toString());
     if (peer) {
       await this._network.broadcastPeer(peer);
     }
