@@ -15,7 +15,7 @@ export class Storage {
   }
 
   public async save(data: any, key?: string): Promise<string> {
-    if (!key) key = btoa(new Date().toISOString());
+    if (!key) key = new Date().toISOString();
     store.set(key, data);
     return key;
   }
