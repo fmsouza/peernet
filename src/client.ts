@@ -3,12 +3,8 @@ import axios from 'axios';
 import { Signal, Log } from './utils';
 
 export class Client {
-  private _address: string;
 
-  public constructor(address: string) {
-    address = `${address}:3390/`;
-    this._address = address;
-  }
+  public constructor(private _address: string) {}
 
   public async request<T>(methodName: string, params: any = {}): Promise<T> {
     Log.info(`Sending '${methodName}' request to ${this._address}...`);

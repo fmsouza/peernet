@@ -4,13 +4,12 @@ import compression from 'compression';
 import helmet from 'helmet';
 import bodyParser from 'body-parser';
 import ip from 'ip';
-import { parse as parseUrl } from 'url';
 
 import { Log } from '../utils';
 
+import { Address } from './address';
 import { Peer } from './peer';
 import { SignalServer } from './signal-server';
-import { Client } from '../client';
 
 export interface NetworkOptions {
   host?: string;
@@ -26,6 +25,7 @@ export class Network {
   private _maxBroadcasts: number = Infinity;
 
   public get address(): string {
+    return new Address(ip.address()).toString();
     return ip.address();
   }
 
@@ -61,20 +61,20 @@ export class Network {
     this._server.use('/', signalling.router);
   }
 
-  private async _connectInitialPeers(ips: string[]): Promise<void> {
-    Log.info(`Connecting to initial peers list: [${ips.join('')}]`);
-    (await Promise.all(ips.map(async (peerIp: any) => {
-      peerIp = parseUrl(peerIp);
+  private async _connectInitialPeers(addresses: string[]): Promise<void> {
+    Log.info(`Connecting to initial peers list: [${addresses.join('')}]`);
+    (await Promise.all(addresses.map(async (peerAddress: string) => {
+      const address: Address = new Address(peerAddress);
       try {
-        if (ip.isEqual(this.address, peerIp.href)) return []; // Avoid adding myself as a peer
-        if (this.peers.some(peer => peer.ip.href === peerIp.href)) return []; // Avoid double adding a peer
-        const peer: Peer = await this.addPeer(peerIp.href);
-        Log.info(`Requesting new peers to ${peerIp.href}...`);
+        if (ip.isEqual(this.address, address.toString())) return []; // Avoid adding myself as a peer
+        if (this.peers.some(peer => peer.address === address.toString())) return []; // Avoid double adding a peer
+        const peer: Peer = await this.addPeer(address.toString());
+        Log.info(`Requesting new peers to ${address}...`);
         const newPeers = await peer.client.getPeers();
         Log.info(`Peers received: ${JSON.stringify(newPeers)}`);
         return newPeers;
       } catch (e) {
-        Log.error(`Failed to add ${peerIp.href} as a peer.`);
+        Log.error(`Failed to add ${address} as a peer.`);
         return [];
       }
     })))
@@ -82,21 +82,21 @@ export class Network {
       .forEach(peerIp => this.addPeer(peerIp));
   }
 
-  public async addPeer(peerIp: string): Promise<Peer> {
-    const peer: Peer = new Peer(peerIp);
-    Log.info(`Announced myself as a peer to ${peerIp}...`);
+  public async addPeer(peerAddress: string): Promise<Peer> {
+    const peer: Peer = new Peer(peerAddress);
+    Log.info(`Announced myself as a peer to ${peer.address}...`);
     await peer.client.announce();
-    this._peers.set(peer.ip.href, peer);
-    Log.info(`Added peer: ${peer.ip.href}`);
+    this._peers.set(peer.address, peer);
+    Log.info(`Added peer: ${peer.address}`);
     return peer;
   }
 
   public async broadcastPeer(newPeer: Peer): Promise<void> {
     await Promise.all(
       this.peers
-        .filter(peer => peer.ip !== newPeer.ip) // Avoid broadcasting the peer to itself
+        .filter(peer => peer.address !== newPeer.address) // Avoid broadcasting the peer to itself
         .slice(0, this._maxBroadcasts)
-        .map(peer => peer.client.announce(newPeer.ip.href))
+        .map(peer => peer.client.announce(newPeer.address))
     );
   }
 

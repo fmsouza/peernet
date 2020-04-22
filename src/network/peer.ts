@@ -1,21 +1,20 @@
+import { Address } from './address';
 import { Client } from "../client";
-import { Url, parse } from 'url';
-
 
 export class Peer {
-  private _ip: Url;
+  private _address: Address;
   private _client: Client;
 
-  public get ip(): Url {
-    return this._ip;
+  public get address(): string {
+    return this._address.toString();
   }
 
   public get client(): Client {
     return this._client;
   }
 
-  public constructor(ip: string) {
-    this._ip = parse(ip);
-    this._client = new Client(this._ip.href);
+  public constructor(address: string) {
+    this._address = new Address(address);
+    this._client = new Client(this._address.toString());
   }
 }
