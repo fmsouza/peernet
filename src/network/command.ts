@@ -6,7 +6,7 @@ export class Command {
   private _data: any;
   private _peer: Peer;
 
-  public id(): string {
+  public get id(): string {
     return this._id;
   }
 
