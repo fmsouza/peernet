@@ -36,7 +36,7 @@ export class Client {
   }
 
   public async broadcast(id: string, data: any): Promise<void> {
-    await this.request<void>(NetworkSignals.BROADCAST_DATA, { id, data });
+    await this.request<void>(NetworkSignals.REQUEST_BROADCAST_DATA, { id, data });
   }
 
   public async getPeers(): Promise<Peer[]> {
