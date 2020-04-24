@@ -26,11 +26,11 @@ export class Storage extends Emitter {
   }
 
   private async _saveReceivedData(command: Command): Promise<void> {
-    const { id, data } = command.data;
-    if (this.has(id)) {
+    const { key, data } = command.data;
+    if (this.has(key)) {
       this.emit(NetworkSignals.FINISH, command);
     } else {
-      await this.save(id, data);
+      await this.save(key, data);
       this.emit(NetworkSignals.BROADCAST_DATA, command);
     }
   }

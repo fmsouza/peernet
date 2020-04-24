@@ -61,11 +61,11 @@ export class Network extends Emitter {
     );
   }
 
-  public async broadcastData(id: string, data: any): Promise<void> {
+  public async broadcastData(key: string, data: any): Promise<void> {
     await Promise.all(
       this.peers
         .slice(0, this._maxBroadcasts)
-        .map(peer => peer.client.broadcast(id, data))
+        .map(peer => peer.client.broadcast(key, data))
     );
   }
 
@@ -78,10 +78,10 @@ export class Network extends Emitter {
   }
 
   private async _onBroadcastData(command: Command): Promise<void> {
-    const { id, data } = command.data;
+    const { key, data } = command.data;
     const response = { status: 200, body: NetworkSignals.OK };
     try {
-      await this.broadcastData(id, data);
+      await this.broadcastData(key, data);
     } catch (e) {
       response.status = e.code || 500;
       response.body = e.message;

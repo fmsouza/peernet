@@ -1,7 +1,7 @@
 import axios from 'axios';
 
 import { NetworkSignals, Peer } from './network';
-import { Log, randomId } from './utils';
+import { Log, generateHash } from './utils';
 
 export class Client {
 
@@ -30,13 +30,13 @@ export class Client {
   }
 
   public async add(data: any): Promise<string> {
-    const id: string = randomId();
-    await this.broadcast(id, data);
-    return id;
+    const hash: string = generateHash(data);
+    await this.broadcast(hash, data);
+    return hash;
   }
 
-  public async broadcast(id: string, data: any): Promise<void> {
-    await this.request<void>(NetworkSignals.REQUEST_BROADCAST_DATA, { id, data });
+  public async broadcast(hash: string, data: any): Promise<void> {
+    await this.request<void>(NetworkSignals.REQUEST_BROADCAST_DATA, { key: hash, data });
   }
 
   public async getPeers(): Promise<Peer[]> {
