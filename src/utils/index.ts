@@ -1,4 +1,5 @@
 export * from './emitter';
 export * from './errors';
-export * as Log from './log';
+export * from './hashing';
 export * from './identity';
+export * as Log from './log';
