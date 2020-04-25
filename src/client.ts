@@ -40,6 +40,12 @@ export class Client {
     return hash;
   }
 
+  public async get<T>(key: string): Promise<T> {
+    return this.request<T>(NetworkSignals.REQUEST_KEY_DATA, {
+      key,
+    });
+  }
+
   public async broadcast(hash: string, data: any): Promise<void> {
     await this.request<void>(NetworkSignals.REQUEST_BROADCAST_DATA, {
       key: hash,

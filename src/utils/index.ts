@@ -1,3 +1,4 @@
+export * from "./async";
 export * from "./emitter";
 export * from "./errors";
 export * from "./hashing";

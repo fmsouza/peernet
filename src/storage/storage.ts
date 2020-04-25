@@ -12,11 +12,11 @@ export class Storage extends Emitter {
     this.on(StorageSignals.SAVE_DATA, this._saveReceivedData.bind(this));
   }
 
-  public has(key: string): boolean {
+  public async has(key: string): Promise<boolean> {
     return store.has(key);
   }
 
-  public async get(key: string): Promise<any> {
+  public async get<T>(key: string): Promise<T> {
     return store.get(key);
   }
 

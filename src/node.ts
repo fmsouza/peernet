@@ -37,9 +37,13 @@ export class NodeDriver {
   public constructor(options: Options) {
     if (NodeDriver._instance) return NodeDriver._instance;
     this._identity = new Identity(options.identity);
-    this._graph = new Graph(options?.graph);
-    this._network = new Network(this._identity, options?.network);
     this._storage = new Storage(options?.storage);
+    this._graph = new Graph(options?.graph);
+    this._network = new Network(
+      this._identity,
+      this._storage,
+      options?.network
+    );
     NodeDriver._instance = this;
   }
 

@@ -2,7 +2,7 @@ import { Server } from "http";
 import ip from "ip";
 
 import { Identity } from "../identity";
-import { StorageSignals } from "../storage";
+import { Storage, StorageSignals } from "../storage";
 import { Log, Emitter } from "../utils";
 
 import { Address } from "./address";
@@ -12,6 +12,7 @@ import { NetworkSignals } from "./signals";
 import { SignalServer } from "./signal-server";
 import { NetworkOptions } from "./types";
 import { Client } from "../client";
+import { timeout } from "../utils";
 
 export class Network extends Emitter {
   private _server: SignalServer;
@@ -32,13 +33,18 @@ export class Network extends Emitter {
     return [...this._peers.values()];
   }
 
-  public constructor(public identity: Identity, options?: NetworkOptions) {
+  public constructor(
+    public identity: Identity,
+    public storage: Storage,
+    options?: NetworkOptions
+  ) {
     super();
     Log.info("Starting server...");
     if (options?.maxBroadcasts) this._maxBroadcasts = options.maxBroadcasts;
     this._server = new SignalServer(this, options);
     this._listener = this._server.listen();
     this.on(NetworkSignals.ANNOUNCE_PEER, this._onPeerAnnounced.bind(this));
+    this.on(NetworkSignals.REQUEST_KEY_DATA, this._onRequestData.bind(this));
     this.on(NetworkSignals.BROADCAST_DATA, this._onBroadcastData.bind(this));
     this.on(NetworkSignals.HANDSHAKE, this._onHandshake.bind(this));
     this.on(
@@ -72,6 +78,13 @@ export class Network extends Emitter {
     );
   }
 
+  public async requestData<T>(key: string): Promise<T> {
+    if (await this.storage.has(key)) {
+      return this.storage.get(key);
+    }
+    return Promise.race(this.peers.map((peer) => peer.client.get<T>(key))); // If I don't have it, I request my peers and they request theirs, until someone has it.
+  }
+
   public async broadcastData(key: string, data: any): Promise<void> {
     await Promise.all(
       this.peers
@@ -93,6 +106,22 @@ export class Network extends Emitter {
     try {
       const { key, data } = await command.getData();
       await this.broadcastData(key, data);
+    } catch (e) {
+      response.status = e.code || 500;
+      response.body = e.message;
+    } finally {
+      this.emit(await command.getEndSignal(), response);
+    }
+  }
+
+  private async _onRequestData(command: Command): Promise<void> {
+    const response = { status: 200, body: null };
+    try {
+      const { key } = await command.getData();
+      response.body = await Promise.race([
+        this.requestData<any>(key),
+        timeout(5000).then(() => null),
+      ]);
     } catch (e) {
       response.status = e.code || 500;
       response.body = e.message;
