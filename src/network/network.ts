@@ -105,6 +105,9 @@ export class Network extends Emitter {
     const response = { status: 200, body: NetworkSignals.OK };
     try {
       const { key, data } = await command.getData();
+      if (!(await this.storage.has(key))) {
+        await this.storage.save(key, data);
+      }
       await this.broadcastData(key, data);
     } catch (e) {
       response.status = e.code || 500;
