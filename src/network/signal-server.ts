@@ -47,8 +47,12 @@ export class SignalServer extends Emitter {
 
   private _connectInitialPeers(addresses: string[] = []): void {
     Log.info(`Connecting to initial peers list: [${addresses.join(", ")}]`);
+    const hostAddress: string = this._network.address;
+    const id: string = this._network.identity.id();
     addresses.forEach((address: string) =>
-      this.emit(NetworkSignals.ANNOUNCE_PEER, { address })
+      this._handleSignal(NetworkSignals.ANNOUNCE_PEER, hostAddress, id, {
+        address,
+      })
     );
   }
 
@@ -58,12 +62,28 @@ export class SignalServer extends Emitter {
     }
     const identity = (req.headers["X-Identity"] || "") as string;
     const { methodName, params } = req.body;
-    const command: Command = new Command(req.ip, identity, params);
-    Log.info(`'${methodName}' received from: ${identity}`);
+    this._handleSignal(methodName, req.ip, identity, params, res);
+  }
 
-    this.on(await command.getEndSignal(), ({ status, body }) =>
-      res.status(status).jsonp(body)
-    );
-    this.emit(methodName, command);
+  private async _handleSignal(
+    signal: string,
+    ip: string,
+    identity: string,
+    params?: any,
+    response?: Response
+  ): Promise<void> {
+    const command: Command = new Command(ip, identity, params);
+    if (this._network.identity.id() !== identity) {
+      Log.info(`'${signal}' received from: ${identity}`);
+    } else {
+      Log.info(`'${signal}' self propagated.`);
+    }
+
+    if (response) {
+      this.on(await command.getEndSignal(), ({ status, body }) =>
+        response.status(status).jsonp(body)
+      );
+    }
+    this.emit(signal, command);
   }
 }
