@@ -1,7 +1,7 @@
-import { Graph, GraphOptions } from './graph';
-import { Identity, IdentityOptions } from './identity';
-import { Network, NetworkOptions } from './network';
-import { Storage, StorageOptions } from './storage';
+import { Graph, GraphOptions } from "./graph";
+import { Identity, IdentityOptions } from "./identity";
+import { Network, NetworkOptions } from "./network";
+import { Storage, StorageOptions } from "./storage";
 
 interface Options {
   graph?: GraphOptions;
@@ -37,7 +37,7 @@ export class NodeDriver {
     if (NodeDriver._instance) return NodeDriver._instance;
     this._graph = new Graph(options?.graph);
     this._identity = new Identity(options?.identity);
-    this._network = new Network(options?.network);
+    this._network = new Network(this._identity, options?.network);
     this._storage = new Storage(options?.storage);
     NodeDriver._instance = this;
   }
