@@ -23,6 +23,11 @@ export class Network extends Emitter {
     return new Address(ip.address()).toString();
   }
 
+  public get client(): Client {
+    const id: string = this.identity.id();
+    return new Client(this.address, id);
+  }
+
   public get peers(): Peer[] {
     return [...this._peers.values()];
   }
@@ -44,15 +49,8 @@ export class Network extends Emitter {
     this.on(NetworkSignals.FINISH, this._onFinish.bind(this));
   }
 
-  public async client(): Promise<Client> {
-    await this.identity.ready();
-    const id: string = await this.identity.id();
-    return new Client(this.address, id);
-  }
-
-  public async isKnownPeer(peer: Peer): Promise<boolean> {
-    await this.identity.ready();
-    const id: string = await this.identity.id();
+  public isKnownPeer(peer: Peer): boolean {
+    const id: string = this.identity.id();
     return id === peer.id || this.peers.some((p) => p.id === peer.id); // Avoids self adding or double adding a peer
   }
 
@@ -104,19 +102,26 @@ export class Network extends Emitter {
   }
 
   private async _onPeerAnnounced(command: Command): Promise<void> {
+    Log.info(`New peer just announced!`);
     const response = { status: 200, body: NetworkSignals.OK };
     try {
+      Log.info(`Retrieving command details...`);
       const data: any = await command.getData<any>();
       let peer: Peer;
+      Log.info(`Checking if the address is in the body...`);
       if (data?.address) {
-        const client: Client = await this.client();
-        const { id } = await client.ack();
+        Log.info("Requesting the ID for the new peer...");
+        const { id } = await this.client.ack();
         peer = new Peer(data.address, id);
       } else {
+        Log.info("Getting the requester details...");
         peer = await command.getPeer();
       }
-      if (!(await this.isKnownPeer(peer))) {
+      Log.info(`(${peer.address}) ${peer.id}`);
+      if (!this.isKnownPeer(peer)) {
+        Log.info(`It's not know. Adding...`);
         await Promise.all([this.addPeer(peer), this.broadcastPeer(peer)]);
+        Log.info(`Getting it's neighbors...`);
         const neighbors: string[] = await peer.client.getPeers();
         neighbors.forEach((address) =>
           this.emit(NetworkSignals.ANNOUNCE_PEER, { address })
@@ -125,13 +130,14 @@ export class Network extends Emitter {
     } catch (e) {
       response.status = e.code || 500;
       response.body = e.message;
+      Log.error(e.message);
     } finally {
       this.emit(await command.getEndSignal(), response);
     }
   }
 
   private async _onHandshake(command: Command): Promise<void> {
-    const id: string = await this.identity.id();
+    const id: string = this.identity.id();
     const response = { status: 200, body: { id } };
     this.emit(await command.getEndSignal(), response);
   }
