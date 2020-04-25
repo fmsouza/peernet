@@ -11,7 +11,7 @@ async function generatePrivateKey(): Promise<Buffer> {
     "hex"
   );
   let privateKey: Buffer = await randomBuffer(32);
-  while (max.compare(privateKey) !== 1) {
+  while (Buffer.compare(privateKey, max) !== 1) {
     privateKey = await randomBuffer(32);
   }
   return privateKey;
