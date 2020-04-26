@@ -1,9 +1,10 @@
 import { Server } from "http";
 import ip from "ip";
 
+import { Client } from "../client";
 import { Identity } from "../identity";
 import { Storage, StorageSignals } from "../storage";
-import { Log, Emitter } from "../utils";
+import { Log, Emitter, timeout } from "../utils";
 
 import { Address } from "./address";
 import { Command } from "./command";
@@ -11,8 +12,6 @@ import { Peer } from "./peer";
 import { NetworkSignals } from "./signals";
 import { SignalServer } from "./signal-server";
 import { NetworkOptions } from "./types";
-import { Client } from "../client";
-import { timeout } from "../utils";
 
 export class Network extends Emitter {
   private _server: SignalServer;
@@ -22,11 +21,6 @@ export class Network extends Emitter {
 
   public get address(): string {
     return new Address(ip.address()).toString();
-  }
-
-  public get client(): Client {
-    const id: string = this.identity.id();
-    return new Client(this.address, id);
   }
 
   public get peers(): Peer[] {
@@ -143,7 +137,9 @@ export class Network extends Emitter {
       Log.info(`Checking if the address is in the body...`);
       if (data?.address) {
         Log.info("Requesting the ID for the new peer...");
-        const { id } = await this.client.ack(data.address);
+        const hostId: string = this.identity.id();
+        const client: Client = new Client(this.address, hostId);
+        const { id } = await client.ack(data.address);
         peer = new Peer(data.address, id);
       } else {
         Log.info("Getting the requester details...");
@@ -151,7 +147,7 @@ export class Network extends Emitter {
       }
       Log.info(`(${peer.address}) ${peer.id}`);
       if (!this.isKnownPeer(peer)) {
-        Log.info(`It's not know. Adding...`);
+        Log.info(`It's not known. Adding...`);
         await Promise.all([this.addPeer(peer), this.broadcastPeer(peer)]);
         Log.info(`Getting it's neighbors...`);
         const neighbors: string[] = await peer.client.getPeers();
