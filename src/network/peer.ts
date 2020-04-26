@@ -1,5 +1,5 @@
-import { Address } from "./address";
-import { Client } from "../client";
+import { Address } from "../common";
+import { Client } from "./client";
 
 export class Peer {
   private _address: Address;

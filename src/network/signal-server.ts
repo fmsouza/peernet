@@ -4,20 +4,22 @@ import compression from "compression";
 import helmet from "helmet";
 import bodyParser from "body-parser";
 
-import { Log, Emitter } from "../utils";
-import { Command } from "./command";
+import { Command } from "../common";
+import { Log } from "../utils";
+
 import { Network } from "./network";
 import { NetworkOptions } from "./types";
 import { NetworkSignals } from "./signals";
+import { Peer } from "./peer";
+import { Address } from "../common";
 
-export class SignalServer extends Emitter {
+export class SignalServer {
   private _server: Express;
 
   public constructor(
     private _network: Network,
     private _options?: NetworkOptions
   ) {
-    super();
     this._server = express();
     this._server.use(compression());
     this._server.use(helmet());
@@ -47,7 +49,7 @@ export class SignalServer extends Emitter {
 
   public handleAddressAsPeer(address: string): void {
     const hostAddress: string = this._network.address;
-    const id: string = this._network.identity.id();
+    const id: string = this._network.identity.id;
     this._handleSignal(NetworkSignals.ANNOUNCE_PEER, hostAddress, id, {
       address,
     });
@@ -64,28 +66,30 @@ export class SignalServer extends Emitter {
     }
     const identity = (req.headers["X-Identity"] || "") as string;
     const { methodName, params } = req.body;
-    this._handleSignal(methodName, req.ip, identity, params, res);
+    const address: string = new Address(req.ip).toString();
+    this._handleSignal(methodName, address, identity, params, res);
   }
 
   private async _handleSignal(
     signal: string,
-    ip: string,
-    identity: string,
+    address: string,
+    id: string,
     params?: any,
     response?: Response
   ): Promise<void> {
-    const command: Command = new Command(ip, identity, params);
-    if (this._network.identity.id() !== identity) {
-      Log.info(`'${signal}' received from: ${identity}`);
+    const peer: Peer = new Peer(address, id);
+    const command: Command = new Command(peer, params);
+    if (this._network.identity.id !== id) {
+      Log.info(`'${signal}' received from: ${id}`);
     } else {
       Log.info(`'${signal}' self propagated.`);
     }
 
     if (response) {
-      this.on(await command.getEndSignal(), ({ status, body }) =>
+      this._network.emitter.end(command, ({ status, body }) =>
         response.status(status).jsonp(body)
       );
     }
-    this.emit(signal, command);
+    this._network.emitter.emit(signal, command);
   }
 }

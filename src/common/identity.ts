@@ -1,25 +1,24 @@
+import { generateHash } from "../utils";
 import { KeyPair } from "./types";
-import { Emitter, generateHash } from "../utils";
 
 export interface IdentityOptions {
   keyPair: { privateKey: string; publicKey: string };
 }
 
-export class Identity extends Emitter {
+export class Identity {
   private _keyPair!: KeyPair;
 
   public get keys(): KeyPair {
     return this._keyPair;
   }
 
-  public constructor(options: IdentityOptions) {
-    super();
-    const { privateKey, publicKey } = options.keyPair;
-    this.__configureKeyPair(privateKey, publicKey);
+  public get id(): string {
+    return generateHash(this._keyPair.publicKey.toString("hex"), "sha256");
   }
 
-  public id(): string {
-    return generateHash(this._keyPair.publicKey.toString("hex"), "sha256");
+  public constructor(options: IdentityOptions) {
+    const { privateKey, publicKey } = options.keyPair;
+    this.__configureKeyPair(privateKey, publicKey);
   }
 
   private __configureKeyPair(privateKey: string, publicKey: string): void {

@@ -1,9 +1,8 @@
 import { Graph, GraphOptions } from "./graph";
-import { Identity, IdentityOptions } from "./identity";
-import { Network, NetworkOptions } from "./network";
+import { Identity, IdentityOptions, Emitter } from "./common";
+import { Client, Network, NetworkOptions } from "./network";
 import { Storage, StorageOptions } from "./storage";
-import { generateKeyPair } from "./identity/utils";
-import { Client } from "./client";
+import { generateKeyPair } from "./utils";
 
 interface Options {
   graph?: GraphOptions;
@@ -20,7 +19,7 @@ export class NodeDriver {
   private _storage!: Storage;
 
   public get client(): Client {
-    const id: string = this._identity.id();
+    const id: string = this._identity.id;
     const address: string = this._network.address;
     return new Client(address, id);
   }
@@ -44,9 +43,12 @@ export class NodeDriver {
   public constructor(options: Options) {
     if (NodeDriver._instance) return NodeDriver._instance;
     this._identity = new Identity(options.identity);
-    this._storage = new Storage(options?.storage);
     this._graph = new Graph(options?.graph);
+    const emitter: Emitter = new Emitter(this._identity);
+
+    this._storage = new Storage(emitter, options?.storage);
     this._network = new Network(
+      emitter,
       this._identity,
       this._storage,
       options?.network

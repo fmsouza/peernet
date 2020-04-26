@@ -12,11 +12,11 @@ const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
     };
     const node = new PeerNet(options);
     await sleep(1000);
-    const key: string = await node.client.add({
+    const key: string = await node.storage.add({
       hello: "Hello world!",
     });
     console.log(key);
-    const data: any = await node.client.get(key);
+    const data: any = await node.storage.get(key);
     console.log(data);
   } catch (e) {
     console.log(e.message);

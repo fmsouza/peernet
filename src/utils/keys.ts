@@ -1,7 +1,7 @@
 import { ec as EllipticCurve } from "elliptic";
 
 import { randomBuffer } from "../utils";
-import { KeyPair } from "./types";
+import { KeyPair } from "../common";
 
 const ecdsa: EllipticCurve = new EllipticCurve("secp256k1");
 

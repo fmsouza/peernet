@@ -1,8 +1,9 @@
 import axios from "axios";
 
-import { NetworkSignals, Peer } from "./network";
-import { Log } from "./utils";
-import { StorageSignals } from "./storage";
+import { Log } from "../utils";
+import { StorageSignals } from "../storage";
+import { Peer } from "./peer";
+import { NetworkSignals } from "./signals";
 
 interface Ack {
   id: string;

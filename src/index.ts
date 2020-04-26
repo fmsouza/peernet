@@ -1,4 +1,4 @@
-import { NodeDriver } from './node';
-export * from './client';
+import { NodeDriver } from "./node";
+export { Client } from "./network";
 
 export default NodeDriver;
