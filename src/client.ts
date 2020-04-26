@@ -1,7 +1,8 @@
 import axios from "axios";
 
 import { NetworkSignals, Peer } from "./network";
-import { Log, generateHash } from "./utils";
+import { Log } from "./utils";
+import { StorageSignals } from "./storage";
 
 interface Ack {
   id: string;
@@ -39,9 +40,9 @@ export class Client {
   }
 
   public async add(data: any): Promise<string> {
-    const hash: string = generateHash(data);
-    await this.broadcast(hash, data);
-    return hash;
+    const key: string = await this.request(StorageSignals.SAVE_DATA, { data });
+    await this.broadcast(key, data);
+    return key;
   }
 
   public async get<T>(key: string): Promise<T> {

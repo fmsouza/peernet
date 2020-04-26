@@ -1,5 +1,5 @@
-import { Command, NetworkSignals } from "../network";
-import { Emitter } from "../utils";
+import { Command } from "../network";
+import { Emitter, generateHash } from "../utils";
 
 import { StorageSignals } from "./signals";
 import { StorageOptions } from "./types";
@@ -25,12 +25,19 @@ export class Storage extends Emitter {
   }
 
   private async _saveReceivedData(command: Command): Promise<void> {
-    const { key, data } = await command.getData();
-    if (this.has(key)) {
-      this.emit(NetworkSignals.FINISH, command);
-    } else {
-      await this.save(key, data);
-      this.emit(NetworkSignals.BROADCAST_DATA, command);
+    const response = { status: 200, body: null };
+    try {
+      const { data } = await command.getData();
+      const hash: string = generateHash(data);
+      if (!this.has(hash)) {
+        await this.save(hash, data);
+        response.body = hash as any;
+      }
+    } catch (e) {
+      response.status = 500;
+      response.body = e.message;
+    } finally {
+      this.emit(await command.getEndSignal(), response);
     }
   }
 }
