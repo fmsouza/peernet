@@ -23,7 +23,7 @@ export class Emitter {
     }
   }
 
-  public emitCommand(event: string, command: Command): void {
+  public async emitCommand(event: string, command: Command): Promise<void> {
     this.events.emit(event, command);
   }
 
@@ -33,7 +33,7 @@ export class Emitter {
     this.emitCommand(event, command);
   }
 
-  public on(event: string, fn: (command: Command) => void): void {
+  public on(event: string, fn: (...args: any[]) => void): void {
     this.events.on(event, fn);
   }
 
@@ -45,7 +45,7 @@ export class Emitter {
     command: Command,
     fn: (...args: any[]) => void
   ): Promise<void> {
-    this.events.on(await command.getEndSignal(), async () => {
+    this.on(await command.getEndSignal(), async () => {
       fn(await command.getResponse());
     });
   }
