@@ -7,7 +7,7 @@ interface CommandResponse {
 }
 
 export class Command {
-  private _id!: string;
+  private _id: Promise<string> = randomBuffer(32).then(buf => buf.toString("hex"));
   private _response: CommandResponse = { status: 200, body: null };
 
   public constructor(private _peer: Peer, private _data: any = null) {}
@@ -22,9 +22,6 @@ export class Command {
   }
 
   public async getId(): Promise<string> {
-    if (!this._id) {
-      this._id = (await randomBuffer(32)).toString("hex");
-    }
     return this._id;
   }
 
