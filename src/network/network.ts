@@ -84,7 +84,7 @@ export class Network {
 
   public async requestData<T>(key: string): Promise<T> {
     if (await this.storage.has(key)) {
-      return this.storage.get(key);
+      return this.storage.get(key).then((node) => node.data);
     }
     return Promise.race(this.peers.map((peer) => peer.client.get<T>(key))); // If I don't have it, I request my peers and they request theirs, until someone has it.
   }

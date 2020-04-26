@@ -2,7 +2,7 @@ import { Command, Emitter } from "../common";
 import { generateHash } from "../utils";
 
 import { StorageSignals } from "./signals";
-import { StorageOptions } from "./types";
+import { StorageOptions, DataNode } from "./types";
 
 export class Storage {
   private _store: Map<string, any> = new Map();
@@ -18,12 +18,12 @@ export class Storage {
     return this._store.has(key);
   }
 
-  public async get<T>(key: string): Promise<T> {
+  public async get(key: string): Promise<DataNode> {
     return this._store.get(key);
   }
 
-  public async create(key: string, data: any): Promise<void> {
-    this._store.set(key, data);
+  public async create(key: string, node: DataNode): Promise<void> {
+    this._store.set(key, node);
   }
 
   public async add(data: any): Promise<string> {
@@ -32,10 +32,13 @@ export class Storage {
   }
 
   private async saveData(data: any): Promise<string> {
-    const hash: string = generateHash(data);
-    if (!(await this.has(hash))) {
-      await this.create(hash, data);
-    }
+    const timestamp: string = new Date().toISOString();
+    const node: DataNode = {
+      data,
+      timestamp,
+    };
+    const hash: string = generateHash(node);
+    await this.create(hash, node);
     return hash;
   }
 
