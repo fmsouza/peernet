@@ -1,3 +1,3 @@
 export enum StorageSignals {
-  SAVE_DATA = '@storage/save-data'
+  SAVE_DATA = "saveData",
 }
