@@ -2,7 +2,7 @@ import { Command, Emitter } from "../common";
 import { generateHash } from "../utils";
 
 import { StorageSignals } from "./signals";
-import { StorageOptions, DataNode } from "./types";
+import { DataNode, StorageOptions } from "./types";
 
 export class Storage {
   private _store: Map<string, any> = new Map();
