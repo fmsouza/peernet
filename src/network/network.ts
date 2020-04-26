@@ -143,7 +143,7 @@ export class Network extends Emitter {
       Log.info(`Checking if the address is in the body...`);
       if (data?.address) {
         Log.info("Requesting the ID for the new peer...");
-        const { id } = await this.client.ack();
+        const { id } = await this.client.ack(data.address);
         peer = new Peer(data.address, id);
       } else {
         Log.info("Getting the requester details...");
@@ -155,8 +155,8 @@ export class Network extends Emitter {
         await Promise.all([this.addPeer(peer), this.broadcastPeer(peer)]);
         Log.info(`Getting it's neighbors...`);
         const neighbors: string[] = await peer.client.getPeers();
-        neighbors.forEach((address) =>
-          this.emit(NetworkSignals.ANNOUNCE_PEER, { address })
+        neighbors.forEach((address: string) =>
+          this._server.handleAddressAsPeer(address)
         );
       }
     } catch (e) {

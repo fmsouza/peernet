@@ -45,15 +45,17 @@ export class SignalServer extends Emitter {
     });
   }
 
-  private _connectInitialPeers(addresses: string[] = []): void {
-    Log.info(`Connecting to initial peers list: [${addresses.join(", ")}]`);
+  public handleAddressAsPeer(address: string): void {
     const hostAddress: string = this._network.address;
     const id: string = this._network.identity.id();
-    addresses.forEach((address: string) =>
-      this._handleSignal(NetworkSignals.ANNOUNCE_PEER, hostAddress, id, {
-        address,
-      })
-    );
+    this._handleSignal(NetworkSignals.ANNOUNCE_PEER, hostAddress, id, {
+      address,
+    });
+  }
+
+  private _connectInitialPeers(addresses: string[] = []): void {
+    Log.info(`Connecting to initial peers list: [${addresses.join(", ")}]`);
+    addresses.forEach((address: string) => this.handleAddressAsPeer(address));
   }
 
   private async _handleRequest(req: Request, res: Response): Promise<void> {

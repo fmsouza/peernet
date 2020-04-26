@@ -10,8 +10,12 @@ interface Ack {
 export class Client {
   public constructor(private _address: string, private _id: string) {}
 
-  public async request<T>(methodName: string, params: any = {}): Promise<T> {
-    Log.info(`Sending '${methodName}' request to ${this._address}...`);
+  public async request<T>(
+    methodName: string,
+    params: any = {},
+    url: string = this._address
+  ): Promise<T> {
+    Log.info(`Sending '${methodName}' request to ${url}...`);
     const headers = {
       "Content-Type": "application/json",
       "X-Identity": this._id,
@@ -20,12 +24,12 @@ export class Client {
       method: "POST",
       data: { methodName, params },
       headers,
-      url: this._address,
+      url,
     }).then((response) => response.data);
   }
 
-  public ack(): Promise<Ack> {
-    return this.request(NetworkSignals.HANDSHAKE);
+  public ack(address: string = this._address): Promise<Ack> {
+    return this.request(NetworkSignals.HANDSHAKE, {}, address);
   }
 
   public async announce(peer?: Peer): Promise<void> {
