@@ -37,6 +37,14 @@ export class SignalServer {
     this._server.post("/", this._handleRequest.bind(this));
   }
 
+  public handleAddressAsPeer(address: string): void {
+    const hostAddress: string = this._network.address;
+    const id: string = this._network.identity.id;
+    this._handleSignal(NetworkSignals.ANNOUNCE_PEER, hostAddress, id, {
+      address,
+    });
+  }
+
   public listen(): Server {
     const port: number = this._options?.port || 3390;
     const host: string = this._options?.host || "0.0.0.0";
@@ -44,14 +52,6 @@ export class SignalServer {
     return this._server.listen(port, host, () => {
       Log.info(`Server started on port ${port}`);
       this._connectInitialPeers(this._options?.initialPeers);
-    });
-  }
-
-  public handleAddressAsPeer(address: string): void {
-    const hostAddress: string = this._network.address;
-    const id: string = this._network.identity.id;
-    this._handleSignal(NetworkSignals.ANNOUNCE_PEER, hostAddress, id, {
-      address,
     });
   }
 
@@ -90,6 +90,6 @@ export class SignalServer {
         response.status(status).jsonp(body)
       );
     }
-    this._network.emitter.emit(signal, command);
+    this._network.emitter.emitCommand(signal, command);
   }
 }
