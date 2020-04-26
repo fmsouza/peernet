@@ -3,6 +3,7 @@ import { Identity, IdentityOptions } from "./identity";
 import { Network, NetworkOptions } from "./network";
 import { Storage, StorageOptions } from "./storage";
 import { generateKeyPair } from "./identity/utils";
+import { Client } from "./client";
 
 interface Options {
   graph?: GraphOptions;
@@ -17,6 +18,12 @@ export class NodeDriver {
   private _identity!: Identity;
   private _network!: Network;
   private _storage!: Storage;
+
+  public get client(): Client {
+    const id: string = this._identity.id();
+    const address: string = this._network.address;
+    return new Client(address, id);
+  }
 
   public get graph(): Graph {
     return this._graph;
