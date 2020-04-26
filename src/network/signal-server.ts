@@ -64,7 +64,7 @@ export class SignalServer {
     if (!req.body || !req.body.methodName) {
       return res.status(422).send("The method name is missing.") as any; // avoids compiler complaints
     }
-    const identity = (req.headers["X-Identity"] || "") as string;
+    const identity = (req.headers["x-identity"] || "") as string;
     const { methodName, params } = req.body;
     const address: string = new Address(req.ip).toString();
     this._handleSignal(methodName, address, identity, params, res);
