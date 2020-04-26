@@ -2,7 +2,7 @@ import { Server } from "http";
 import ip from "ip";
 
 import { Address, Command, Emitter, Identity } from "../common";
-import { Storage, StorageSignals } from "../storage";
+import { DataNode, Storage, StorageSignals } from "../storage";
 import { Log, timeout } from "../utils";
 
 import { Client } from "./client";
@@ -82,11 +82,17 @@ export class Network {
     );
   }
 
-  public async requestData<T>(key: string): Promise<T> {
+  public async requestData(key: string): Promise<DataNode> {
     if (await this.storage.has(key)) {
-      return this.storage.get(key).then((node) => node.data);
+      return this.storage.get(key);
     }
-    return Promise.race(this.peers.map((peer) => peer.client.get<T>(key))); // If I don't have it, I request my peers and they request theirs, until someone has it.
+    const node: DataNode = await Promise.race(
+      this.peers.map((peer) => peer.client.get(key))
+    ); // If I don't have it, I request my peers and they request theirs, until someone has it.
+    if (node) {
+      await this.storage.create(key, node);
+    }
+    return node;
   }
 
   public async broadcastData(key: string, data: any): Promise<void> {
@@ -123,11 +129,11 @@ export class Network {
   }
 
   private async _onRequestData(command: Command): Promise<void> {
-    const response = { status: 200, body: null };
+    const response = { status: 200, body: null as any };
     try {
       const { key } = await command.getData();
       response.body = await Promise.race([
-        this.requestData<any>(key),
+        this.requestData(key),
         timeout(5000).then(() => null),
       ]);
     } catch (e) {

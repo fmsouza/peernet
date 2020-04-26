@@ -1,7 +1,7 @@
 import axios from "axios";
 
 import { Log } from "../utils";
-import { StorageSignals } from "../storage";
+import { DataNode, StorageSignals } from "../storage";
 import { Peer } from "./peer";
 import { NetworkSignals } from "./signals";
 
@@ -46,8 +46,8 @@ export class Client {
     return key;
   }
 
-  public async get<T>(key: string): Promise<T> {
-    return this.request<T>(NetworkSignals.REQUEST_KEY_DATA, {
+  public async get(key: string): Promise<DataNode> {
+    return this.request<DataNode>(NetworkSignals.REQUEST_KEY_DATA, {
       key,
     });
   }
