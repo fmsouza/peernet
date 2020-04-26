@@ -143,7 +143,6 @@ export class Network {
     Log.info(`New peer just announced!`);
     const response = { status: 200, body: NetworkSignals.OK };
     try {
-      Log.info(`Retrieving command details...`);
       const data: any = await command.getData<any>();
       let peer: Peer;
       Log.info(`Checking if the address is in the body...`);
