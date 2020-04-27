@@ -4,7 +4,7 @@ const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
 (async function main() {
   try {
-    const keys = await PeerNet.createNewKeys();
+    const keys = PeerNet.createNewKeys();
     const options = {
       identity: {
         keyPair: keys,

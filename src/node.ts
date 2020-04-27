@@ -56,11 +56,8 @@ export class NodeDriver {
     NodeDriver._instance = this;
   }
 
-  public static async createNewKeys(): Promise<{
-    privateKey: string;
-    publicKey: string;
-  }> {
-    const keyPair = await generateKeyPair();
+  public static createNewKeys(): { privateKey: string; publicKey: string } {
+    const keyPair = generateKeyPair();
     return {
       privateKey: keyPair.privateKey.toString("hex"),
       publicKey: keyPair.publicKey.toString("hex"),
